@@ -48,8 +48,7 @@ gzip_types
 # ───────────────────────────────
 location /geoserver {
     # Dynamic upstream reference
-    set $upstream geoserver:8080;
-
+    set $upstream $GEOSERVER_LB_HOST_IP:$GEOSERVER_LB_PORT;
     proxy_set_header X-Forwarded-Host $http_host;
     proxy_set_header X-Forwarded-Server $http_host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -115,11 +114,11 @@ location /uploaded/ {
     }
 }
 
-# ───────────────────────────────
+# # ───────────────────────────────
 # GeoNode (Django Backend)
 # ───────────────────────────────
 location / {
-    set $upstream django:8000;
+    set $upstream $GEONODE_LB_HOST_IP:$GEONODE_LB_PORT;
 
     # ─ Handle CORS preflight (OPTIONS)
     if ($request_method = OPTIONS) {
@@ -133,18 +132,18 @@ location / {
         return 204;
     }
 
-    add_header Access-Control-Allow-Credentials false;
+    add_header Access-Control-Allow-Credentials true always;
     add_header Access-Control-Allow-Headers "Content-Type, Accept, Authorization, Origin, User-Agent";
     add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, OPTIONS";
 
-    # ─ Proxy Settings
+    # ─ Proxy Settings (HTTPS awareness)
     proxy_redirect off;
     proxy_set_header Host $http_host;
-    proxy_set_header Origin $scheme://$http_host;
+    proxy_set_header Origin https://$http_host;                 
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-Host $server_name;
+    proxy_set_header X-Forwarded-Host $http_host;               
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto; 
     proxy_hide_header X-Frame-Options;
     proxy_request_buffering off;
 
